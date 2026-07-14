@@ -1,0 +1,15 @@
+{
+  "connector": "github",
+  "action": "issue.comment",
+  "status": "failed",
+  "error": "network reset before response",
+  "payload": {
+    "repo": "demo/repo",
+    "issue": 42,
+    "body": "Smoke failed"
+  },
+  "evidence": [
+    "logs/issue-003.log"
+  ],
+  "idempotencyKey": null
+}

@@ -1,0 +1,14 @@
+{
+  "connector": "slack",
+  "action": "messages.post",
+  "status": "failed",
+  "error": "timeout after accepted request",
+  "payload": {
+    "channel": "C123",
+    "text": "Launch reminder"
+  },
+  "evidence": [
+    "logs/slack-001.log"
+  ],
+  "idempotencyKey": null
+}

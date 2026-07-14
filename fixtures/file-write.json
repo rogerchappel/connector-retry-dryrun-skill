@@ -1,0 +1,13 @@
+{
+  "connector": "filesystem",
+  "action": "file.write",
+  "status": "failed",
+  "error": "permission denied before write",
+  "payload": {
+    "path": "docs/out.md"
+  },
+  "evidence": [
+    "logs/file-004.log"
+  ],
+  "idempotencyKey": "file-docs-out-md"
+}

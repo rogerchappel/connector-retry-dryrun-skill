@@ -1,0 +1,15 @@
+{
+  "connector": "crm",
+  "action": "contact.update",
+  "status": "failed",
+  "error": "validation rejected before write",
+  "payload": {
+    "contactId": "c_123",
+    "field": "stage",
+    "value": "Qualified"
+  },
+  "evidence": [
+    "logs/crm-002.log"
+  ],
+  "idempotencyKey": "crm-c_123-stage-20260714"
+}
