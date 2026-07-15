@@ -6,7 +6,7 @@ Local-first retry planner for connector actions with idempotency and approval ev
 
 ```bash
 npm install
-npm run build
+npm run release:check
 connector-retry-dryrun plan fixtures/slack-failure.json --out .tmp/retry-plan.md --json .tmp/retry-plan.json
 connector-retry-dryrun check .tmp/retry-plan.json --require-approval risky
 ```
@@ -25,3 +25,17 @@ Import from `connector-retry-dryrun-skill` to build local-first automation aroun
 ## Limitations
 
 V1 uses conservative heuristics and fixture inputs. Provider-specific state should still be checked by a human before risky external actions.
+
+## Verification
+
+```bash
+npm run check
+npm test
+npm run smoke
+npm run package:smoke
+npm run release:check
+```
+
+`release:check` is the CI and release-candidate gate. It runs TypeScript checks,
+fixture-backed tests, the CLI retry-plan smoke path, and an npm pack dry run
+after building the CLI.
