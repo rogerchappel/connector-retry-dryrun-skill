@@ -11,7 +11,4 @@ jobs:
         with:
           node-version: 20
       - run: npm ci
-      - run: npm run check
-      - run: npm test
-      - run: npm run smoke
-      - run: npm run package:smoke
+      - run: npm run release:check
