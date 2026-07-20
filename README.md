@@ -11,6 +11,22 @@ connector-retry-dryrun plan fixtures/slack-failure.json --out .tmp/retry-plan.md
 connector-retry-dryrun check .tmp/retry-plan.json --require-approval risky
 ```
 
+## Runnable Demo
+
+Compare two checked-in failure scenarios without connector credentials, network
+access, or output files:
+
+```bash
+npm run demo
+```
+
+The Slack fixture models a timed-out message post without an idempotency key, so
+the planner classifies it as `needs_idempotency_key` with required approval. The
+CRM fixture includes an idempotency key, so it is classified as
+`needs_human_approval` with recommended approval and a single-retry next step.
+The demo renders both Markdown plans to standard output and does not execute a
+retry.
+
 ## Library
 
 Import from `connector-retry-dryrun-skill` to build local-first automation around the same deterministic planner.
