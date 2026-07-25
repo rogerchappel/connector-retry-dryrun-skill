@@ -1,5 +1,5 @@
 import test from 'node:test'; import assert from 'node:assert/strict'; import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path'; import { spawnSync } from 'node:child_process';
-import { planFromLog, checkPlan, validateActionLog, validateRetryPlan } from '../index.js';
+import { planFromLog, renderMarkdown, checkPlan, validateActionLog, validateRetryPlan } from '../index.js';
 test('classifies mutation without idempotency as approval gated', () => { const log = JSON.parse(fs.readFileSync('fixtures/slack-failure.json','utf8')); const plan = planFromLog('fixtures/slack-failure.json', log); assert.equal(plan.classification, 'needs_idempotency_key'); assert.equal(checkPlan(plan).length, 0); });
 test('classifies keyed update with approval guidance', () => { const log = JSON.parse(fs.readFileSync('fixtures/crm-update.json','utf8')); const plan = planFromLog('fixtures/crm-update.json', log); assert.equal(plan.classification, 'needs_human_approval'); assert.equal(plan.approval, 'recommended'); });
 test('validates every checked-in action log fixture', () => {
@@ -24,6 +24,7 @@ test('rejects malformed and internally inconsistent retry plans', () => {
 });
 test('checkPlan validates plans before applying policy', () => {
   assert.throws(() => checkPlan({} as never), /retry plan\.source must be a non-empty string/);
+  assert.throws(() => renderMarkdown({} as never), /retry plan\.source must be a non-empty string/);
   const keyed = planFromLog('fixture.json', { connector: 'crm', action: 'contact.update', idempotencyKey: 'key-1' });
   assert.throws(() => checkPlan({ ...keyed, idempotencyKey: null }), /needs_human_approval classification requires a non-empty idempotencyKey/);
 });

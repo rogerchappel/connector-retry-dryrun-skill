@@ -77,6 +77,7 @@ export function classify(log: ActionLog): Omit<RetryPlan,'source'> {
 }
 export function planFromLog(source: string, log: ActionLog): RetryPlan { text(source, 'retry plan.source'); return { source, ...classify(log) }; }
 export function renderMarkdown(plan: RetryPlan): string {
+  validateRetryPlan(plan);
   return ['# Connector Retry Dry-Run Plan','',`Source: ${plan.source}`,`Connector: ${plan.connector}`,`Action: ${plan.action}`,`Classification: ${plan.classification}`,`Approval: ${plan.approval}`,'','## Rationale',...plan.rationale.map((item)=>`- ${item}`),'','## Evidence',...(plan.evidence.length ? plan.evidence.map((item)=>`- ${item}`) : ['- none recorded']),'','## Next Steps',...plan.nextSteps.map((item)=>`- ${item}`),''].join('\n');
 }
 export function checkPlan(plan: RetryPlan, requireApproval: ApprovalPolicy = 'risky'): string[] {
