@@ -22,3 +22,17 @@ connector-retry-dryrun check .tmp/retry-plan.json --require-approval risky
 ```
 
 Reports are designed for release-candidate PR bodies and agent handoffs.
+
+Malformed JSON structures are rejected before classification or policy checks:
+
+```bash
+printf '{}\n' > .tmp/empty-log.json
+connector-retry-dryrun plan .tmp/empty-log.json
+# action log.connector must be a non-empty string
+
+connector-retry-dryrun check .tmp/retry-plan.json --require-approval invalid
+# --require-approval must be one of: none, risky, all
+```
+
+Both commands exit with a nonzero status. See the JSON input schema in the
+README before generating logs or plans programmatically.
