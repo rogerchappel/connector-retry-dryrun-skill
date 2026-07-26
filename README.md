@@ -11,6 +11,30 @@ connector-retry-dryrun plan fixtures/slack-failure.json --out .tmp/retry-plan.md
 connector-retry-dryrun check .tmp/retry-plan.json --require-approval risky
 ```
 
+`--require-approval` accepts `none`, `risky` (the default), or `all`.
+
+## JSON inputs
+
+An action log must be a JSON object with non-empty string `connector` and
+`action` fields. Optional `status`, `error`, and `idempotencyKey` values must be
+non-empty strings (`idempotencyKey` may also be `null`); `payload` must be an
+object, and `evidence` must be an array of non-empty strings.
+
+A saved retry plan must contain non-empty string `source`, `connector`, and
+`action` fields; a supported `classification` and `approval`; non-empty string
+arrays for `rationale` and `nextSteps`; and a string array for `evidence`.
+Classification, approval, and idempotency must agree:
+
+- `safe` requires `approval: "none"`.
+- `needs_idempotency_key` requires `approval: "required"` and no key.
+- `needs_human_approval` requires a key and `recommended` or `required`
+  approval.
+- `do_not_retry` requires `approval: "required"`.
+
+The library validators throw deterministic field-specific errors. The CLI
+prints the same error to standard error and exits nonzero for malformed input,
+tampered/inconsistent plans, or unsupported approval policy values.
+
 ## Runnable Demo
 
 Compare two checked-in failure scenarios without connector credentials, network
