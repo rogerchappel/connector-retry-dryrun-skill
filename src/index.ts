@@ -2,7 +2,7 @@ export type RetryClass = 'safe' | 'needs_idempotency_key' | 'needs_human_approva
 export type ApprovalPolicy = 'none' | 'risky' | 'all';
 export interface ActionLog { connector: string; action: string; status?: string; error?: string; payload?: Record<string, unknown>; evidence?: string[]; idempotencyKey?: string | null; }
 export interface RetryPlan { source: string; connector: string; action: string; classification: RetryClass; approval: 'none' | 'recommended' | 'required'; rationale: string[]; idempotencyKey?: string | null; evidence: string[]; nextSteps: string[]; }
-const writeLike = [/post/i, /send/i, /comment/i, /create/i, /update/i, /delete/i, /write/i];
+const mutationVerbs = new Set(['post', 'send', 'comment', 'create', 'update', 'delete', 'write', 'publish', 'upload']);
 const retryClasses: RetryClass[] = ['safe', 'needs_idempotency_key', 'needs_human_approval', 'do_not_retry'];
 const approvals: RetryPlan['approval'][] = ['none', 'recommended', 'required'];
 const approvalPolicies: ApprovalPolicy[] = ['none', 'risky', 'all'];
@@ -52,15 +52,23 @@ export function parseApprovalPolicy(value: unknown): ApprovalPolicy {
   if (!approvalPolicies.includes(value as ApprovalPolicy)) throw new Error(`--require-approval must be one of: ${approvalPolicies.join(', ')}`);
   return value as ApprovalPolicy;
 }
+function actionSegments(action: string): string[] {
+  return action
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+}
 export function classify(log: ActionLog): Omit<RetryPlan,'source'> {
   validateActionLog(log);
   const action = log.action;
   const connector = log.connector;
   const rationale: string[] = [];
   const evidence = Array.isArray(log.evidence) ? log.evidence : [];
-  const mutates = writeLike.some((rule) => rule.test(action));
+  const segments = actionSegments(action);
+  const mutates = segments.some((segment) => mutationVerbs.has(segment));
   const hasKey = Boolean(log.idempotencyKey);
-  if (/delete/i.test(action)) {
+  if (segments.includes('delete')) {
     rationale.push('Delete-like operations are irreversible without live provider state.');
     return { connector, action, classification:'do_not_retry', approval:'required', rationale, idempotencyKey:log.idempotencyKey ?? null, evidence, nextSteps:['Do not retry automatically. Ask a human owner to inspect provider state.'] };
   }
