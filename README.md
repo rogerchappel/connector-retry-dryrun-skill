@@ -31,6 +31,11 @@ Classification, approval, and idempotency must agree:
   approval.
 - `do_not_retry` requires `approval: "required"`.
 
+Mutation detection recognizes boundary-delimited action verbs including
+`post`, `send`, `create`, `update`, `delete`, `publish`, and `upload`. See
+[the safety model](docs/SAFETY.md#action-name-heuristic) for the complete list
+and limitations.
+
 The library validators throw deterministic field-specific errors. The CLI
 prints the same error to standard error and exits nonzero for malformed input,
 tampered/inconsistent plans, or unsupported approval policy values.

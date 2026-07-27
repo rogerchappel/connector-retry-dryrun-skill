@@ -1,5 +1,22 @@
 import test from 'node:test'; import assert from 'node:assert/strict'; import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path'; import { spawnSync } from 'node:child_process';
 import { planFromLog, renderMarkdown, checkPlan, validateActionLog, validateRetryPlan } from '../index.js';
+const actionCases = [
+  ['post_message', 'needs_idempotency_key'],
+  ['contact.update', 'needs_idempotency_key'],
+  ['messages.publish', 'needs_idempotency_key'],
+  ['files/upload', 'needs_idempotency_key'],
+  ['messages.delete', 'do_not_retry'],
+  ['messages.get', 'safe'],
+  ['files.list', 'safe'],
+  ['reports.getPostmortem', 'safe'],
+] as const;
+test('classifies boundary-delimited mutation verbs without read-name false positives', () => {
+  for (const [action, classification] of actionCases) {
+    const plan = planFromLog('fixture.json', { connector: 'test', action });
+    assert.equal(plan.classification, classification, action);
+    assert.equal(plan.approval === 'none', classification === 'safe', action);
+  }
+});
 test('classifies mutation without idempotency as approval gated', () => { const log = JSON.parse(fs.readFileSync('fixtures/slack-failure.json','utf8')); const plan = planFromLog('fixtures/slack-failure.json', log); assert.equal(plan.classification, 'needs_idempotency_key'); assert.equal(checkPlan(plan).length, 0); });
 test('classifies keyed update with approval guidance', () => { const log = JSON.parse(fs.readFileSync('fixtures/crm-update.json','utf8')); const plan = planFromLog('fixtures/crm-update.json', log); assert.equal(plan.classification, 'needs_human_approval'); assert.equal(plan.approval, 'recommended'); });
 test('validates every checked-in action log fixture', () => {
@@ -44,4 +61,15 @@ test('compiled CLI rejects empty input, tampered plans, and unsupported approval
   const policyResult = spawnSync(process.execPath, ['dist/cli.js', 'check', valid, '--require-approval', 'invalid'], { encoding: 'utf8' });
   assert.notEqual(policyResult.status, 0);
   assert.match(policyResult.stderr, /--require-approval must be one of/);
+});
+test('compiled CLI applies mutation boundaries to action logs', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'connector-retry-actions-'));
+  for (const [action, classification] of actionCases) {
+    const input = path.join(directory, `${action.replaceAll(/[^a-z0-9]/gi, '-')}.json`);
+    const output = path.join(directory, `${action.replaceAll(/[^a-z0-9]/gi, '-')}-plan.json`);
+    fs.writeFileSync(input, JSON.stringify({ connector: 'test', action }));
+    const result = spawnSync(process.execPath, ['dist/cli.js', 'plan', input, '--json', output], { encoding: 'utf8' });
+    assert.equal(result.status, 0, `${action}: ${result.stderr}`);
+    assert.equal(JSON.parse(fs.readFileSync(output, 'utf8')).classification, classification, action);
+  }
 });
