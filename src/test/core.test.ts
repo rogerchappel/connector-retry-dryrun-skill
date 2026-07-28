@@ -5,10 +5,24 @@ const actionCases = [
   ['contact.update', 'needs_idempotency_key'],
   ['messages.publish', 'needs_idempotency_key'],
   ['files/upload', 'needs_idempotency_key'],
+  ['contacts.patch', 'needs_idempotency_key'],
+  ['patchContact', 'needs_idempotency_key'],
+  ['data/put', 'needs_idempotency_key'],
+  ['putRecord', 'needs_idempotency_key'],
+  ['records-upsert', 'needs_idempotency_key'],
+  ['upsertRecord', 'needs_idempotency_key'],
   ['messages.delete', 'do_not_retry'],
+  ['files.remove', 'do_not_retry'],
+  ['removeFile', 'do_not_retry'],
+  ['messages_archive', 'do_not_retry'],
+  ['archiveMessage', 'do_not_retry'],
   ['messages.get', 'safe'],
   ['files.list', 'safe'],
   ['reports.getPostmortem', 'safe'],
+  ['contacts.dispatch', 'safe'],
+  ['records.putative', 'safe'],
+  ['files.removedAt', 'safe'],
+  ['messages.archivedList', 'safe'],
 ] as const;
 test('classifies boundary-delimited mutation verbs without read-name false positives', () => {
   for (const [action, classification] of actionCases) {
@@ -19,6 +33,20 @@ test('classifies boundary-delimited mutation verbs without read-name false posit
 });
 test('classifies mutation without idempotency as approval gated', () => { const log = JSON.parse(fs.readFileSync('fixtures/slack-failure.json','utf8')); const plan = planFromLog('fixtures/slack-failure.json', log); assert.equal(plan.classification, 'needs_idempotency_key'); assert.equal(checkPlan(plan).length, 0); });
 test('classifies keyed update with approval guidance', () => { const log = JSON.parse(fs.readFileSync('fixtures/crm-update.json','utf8')); const plan = planFromLog('fixtures/crm-update.json', log); assert.equal(plan.classification, 'needs_human_approval'); assert.equal(plan.approval, 'recommended'); });
+test('classifies keyed patch, put, and upsert mutations with approval guidance', () => {
+  for (const action of ['contacts.patch', 'putRecord', 'records-upsert']) {
+    const plan = planFromLog('fixture.json', { connector: 'test', action, idempotencyKey: 'key-1' });
+    assert.equal(plan.classification, 'needs_human_approval', action);
+    assert.equal(plan.approval, 'recommended', action);
+  }
+});
+test('keeps keyed remove and archive actions non-retryable', () => {
+  for (const action of ['files.remove', 'archiveMessage']) {
+    const plan = planFromLog('fixture.json', { connector: 'test', action, idempotencyKey: 'key-1' });
+    assert.equal(plan.classification, 'do_not_retry', action);
+    assert.equal(plan.approval, 'required', action);
+  }
+});
 test('validates every checked-in action log fixture', () => {
   for (const file of fs.readdirSync('fixtures').filter((name) => name.endsWith('.json'))) {
     assert.doesNotThrow(() => validateActionLog(JSON.parse(fs.readFileSync(path.join('fixtures', file), 'utf8'))));

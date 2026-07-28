@@ -6,13 +6,22 @@ The package is local-first. Planning commands can write report files only when t
 
 The planner splits action names at punctuation, underscores, and camel-case
 boundaries. A segment equal to `post`, `send`, `comment`, `create`, `update`,
-`delete`, `write`, `publish`, or `upload` is treated as a mutation. Delete
-actions are never retried automatically; other mutations require an
-idempotency key and approval guidance.
+`patch`, `put`, `upsert`, `delete`, `remove`, `archive`, `write`, `publish`, or
+`upload` is treated as a mutation. Delete, remove, and archive actions are
+classified as `do_not_retry` even when an idempotency key is present, because
+the planner cannot establish the provider-side state needed to reverse them.
+Other mutations require an idempotency key and approval guidance.
 
 The segment match is intentionally boundary-aware: a read such as
-`reports.getPostmortem` does not become a mutation merely because
-`postmortem` contains `post`. This is a conservative naming heuristic, not
-provider-schema validation. Unknown mutation verbs can still be classified as
-safe, so callers must review generated plans against the connector's API
-semantics before acting.
+`reports.getPostmortem` does not become a mutation merely because `postmortem`
+contains `post`; similarly, `records.putative` and `contacts.dispatch` remain
+read-only by name. Separator forms such as `contacts.patch` and
+`records-upsert`, and camel-case forms such as `patchContact` and
+`upsertRecord`, are recognized.
+
+This is a conservative naming heuristic, not provider-schema validation. It
+does not inspect HTTP methods, payloads, or provider metadata. Unknown or
+provider-specific mutation verbs can still be classified as safe, while an
+action whose name uses one of these verbs for a read-only operation can be
+classified as a mutation. Callers must review generated plans against the
+connector's API semantics and current provider state before acting.

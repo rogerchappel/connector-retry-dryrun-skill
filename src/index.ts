@@ -2,7 +2,11 @@ export type RetryClass = 'safe' | 'needs_idempotency_key' | 'needs_human_approva
 export type ApprovalPolicy = 'none' | 'risky' | 'all';
 export interface ActionLog { connector: string; action: string; status?: string; error?: string; payload?: Record<string, unknown>; evidence?: string[]; idempotencyKey?: string | null; }
 export interface RetryPlan { source: string; connector: string; action: string; classification: RetryClass; approval: 'none' | 'recommended' | 'required'; rationale: string[]; idempotencyKey?: string | null; evidence: string[]; nextSteps: string[]; }
-const mutationVerbs = new Set(['post', 'send', 'comment', 'create', 'update', 'delete', 'write', 'publish', 'upload']);
+const mutationVerbs = new Set([
+  'post', 'send', 'comment', 'create', 'update', 'patch', 'put', 'upsert',
+  'delete', 'remove', 'archive', 'write', 'publish', 'upload'
+]);
+const irreversibleVerbs = new Set(['delete', 'remove', 'archive']);
 const retryClasses: RetryClass[] = ['safe', 'needs_idempotency_key', 'needs_human_approval', 'do_not_retry'];
 const approvals: RetryPlan['approval'][] = ['none', 'recommended', 'required'];
 const approvalPolicies: ApprovalPolicy[] = ['none', 'risky', 'all'];
@@ -68,8 +72,8 @@ export function classify(log: ActionLog): Omit<RetryPlan,'source'> {
   const segments = actionSegments(action);
   const mutates = segments.some((segment) => mutationVerbs.has(segment));
   const hasKey = Boolean(log.idempotencyKey);
-  if (segments.includes('delete')) {
-    rationale.push('Delete-like operations are irreversible without live provider state.');
+  if (segments.some((segment) => irreversibleVerbs.has(segment))) {
+    rationale.push('Delete-like or archival operations are irreversible without live provider state.');
     return { connector, action, classification:'do_not_retry', approval:'required', rationale, idempotencyKey:log.idempotencyKey ?? null, evidence, nextSteps:['Do not retry automatically. Ask a human owner to inspect provider state.'] };
   }
   if (!mutates) {

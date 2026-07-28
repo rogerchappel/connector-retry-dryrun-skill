@@ -32,8 +32,11 @@ Classification, approval, and idempotency must agree:
 - `do_not_retry` requires `approval: "required"`.
 
 Mutation detection recognizes boundary-delimited action verbs including
-`post`, `send`, `create`, `update`, `delete`, `publish`, and `upload`. See
-[the safety model](docs/SAFETY.md#action-name-heuristic) for the complete list
+`post`, `send`, `comment`, `create`, `update`, `patch`, `put`, `upsert`,
+`delete`, `remove`, `archive`, `write`, `publish`, and `upload`. `delete`,
+`remove`, and `archive` are classified as `do_not_retry`; the other mutation
+verbs follow the idempotency-key policy above. See
+[the safety model](docs/SAFETY.md#action-name-heuristic) for boundary examples
 and limitations.
 
 The library validators throw deterministic field-specific errors. The CLI
