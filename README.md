@@ -33,7 +33,7 @@ Classification, approval, and idempotency must agree:
 
 Mutation detection recognizes boundary-delimited action verbs including
 `post`, `send`, `comment`, `create`, `update`, `patch`, `put`, `upsert`,
-`delete`, `remove`, `archive`, `write`, `publish`, and `upload`. `delete`,
+`add`, `delete`, `remove`, `archive`, `write`, `publish`, and `upload`. `delete`,
 `remove`, and `archive` are classified as `do_not_retry`; the other mutation
 verbs follow the idempotency-key policy above. See
 [the safety model](docs/SAFETY.md#action-name-heuristic) for boundary examples

@@ -11,6 +11,8 @@ const actionCases = [
   ['putRecord', 'needs_idempotency_key'],
   ['records-upsert', 'needs_idempotency_key'],
   ['upsertRecord', 'needs_idempotency_key'],
+  ['members.add', 'needs_idempotency_key'],
+  ['addMember', 'needs_idempotency_key'],
   ['messages.delete', 'do_not_retry'],
   ['files.remove', 'do_not_retry'],
   ['removeFile', 'do_not_retry'],
@@ -23,6 +25,8 @@ const actionCases = [
   ['records.putative', 'safe'],
   ['files.removedAt', 'safe'],
   ['messages.archivedList', 'safe'],
+  ['members.address', 'safe'],
+  ['catalogs.additionalInfo', 'safe'],
 ] as const;
 test('classifies boundary-delimited mutation verbs without read-name false positives', () => {
   for (const [action, classification] of actionCases) {
@@ -33,8 +37,8 @@ test('classifies boundary-delimited mutation verbs without read-name false posit
 });
 test('classifies mutation without idempotency as approval gated', () => { const log = JSON.parse(fs.readFileSync('fixtures/slack-failure.json','utf8')); const plan = planFromLog('fixtures/slack-failure.json', log); assert.equal(plan.classification, 'needs_idempotency_key'); assert.equal(checkPlan(plan).length, 0); });
 test('classifies keyed update with approval guidance', () => { const log = JSON.parse(fs.readFileSync('fixtures/crm-update.json','utf8')); const plan = planFromLog('fixtures/crm-update.json', log); assert.equal(plan.classification, 'needs_human_approval'); assert.equal(plan.approval, 'recommended'); });
-test('classifies keyed patch, put, and upsert mutations with approval guidance', () => {
-  for (const action of ['contacts.patch', 'putRecord', 'records-upsert']) {
+test('classifies keyed patch, put, upsert, and add mutations with approval guidance', () => {
+  for (const action of ['contacts.patch', 'putRecord', 'records-upsert', 'members.add', 'addMember']) {
     const plan = planFromLog('fixture.json', { connector: 'test', action, idempotencyKey: 'key-1' });
     assert.equal(plan.classification, 'needs_human_approval', action);
     assert.equal(plan.approval, 'recommended', action);
