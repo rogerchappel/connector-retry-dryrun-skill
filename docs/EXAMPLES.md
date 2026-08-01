@@ -17,20 +17,22 @@ getting the recommended human approval.
 ## Save and Check a Plan
 
 ```bash
-connector-retry-dryrun plan fixtures/slack-failure.json --out .tmp/retry-plan.md --json .tmp/retry-plan.json
-connector-retry-dryrun check .tmp/retry-plan.json --require-approval risky
+npm run cli -- plan fixtures/slack-failure.json --out .tmp/retry-plan.md --json .tmp/retry-plan.json
+npm run cli -- check .tmp/retry-plan.json --require-approval risky
 ```
 
 Reports are designed for release-candidate PR bodies and agent handoffs.
+Run `npm install` first in a fresh checkout; `npm run cli --` builds and invokes
+the local executable without a global install or package link.
 
 Malformed JSON structures are rejected before classification or policy checks:
 
 ```bash
 printf '{}\n' > .tmp/empty-log.json
-connector-retry-dryrun plan .tmp/empty-log.json
+npm run cli -- plan .tmp/empty-log.json
 # action log.connector must be a non-empty string
 
-connector-retry-dryrun check .tmp/retry-plan.json --require-approval invalid
+npm run cli -- check .tmp/retry-plan.json --require-approval invalid
 # --require-approval must be one of: none, risky, all
 ```
 

@@ -22,6 +22,9 @@ Default commands only read local files and write requested reports. Do not use t
 ## Examples
 
 ```bash
-connector-retry-dryrun plan fixtures/slack-failure.json --out .tmp/retry-plan.md --json .tmp/retry-plan.json
-connector-retry-dryrun check .tmp/retry-plan.json --require-approval risky
+npm run cli -- plan fixtures/slack-failure.json --out .tmp/retry-plan.md --json .tmp/retry-plan.json
+npm run cli -- check .tmp/retry-plan.json --require-approval risky
 ```
+
+From a fresh checkout, run `npm install` first. The `cli` script builds and
+runs the repository-local executable without requiring a global install.
