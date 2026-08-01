@@ -7,9 +7,12 @@ Local-first retry planner for connector actions with idempotency and approval ev
 ```bash
 npm install
 npm run release:check
-connector-retry-dryrun plan fixtures/slack-failure.json --out .tmp/retry-plan.md --json .tmp/retry-plan.json
-connector-retry-dryrun check .tmp/retry-plan.json --require-approval risky
+npm run cli -- plan fixtures/slack-failure.json --out .tmp/retry-plan.md --json .tmp/retry-plan.json
+npm run cli -- check .tmp/retry-plan.json --require-approval risky
 ```
+
+`npm run cli --` builds and runs the checkout's local CLI; no global install or
+package link is required.
 
 `--require-approval` accepts `none`, `risky` (the default), or `all`.
 
