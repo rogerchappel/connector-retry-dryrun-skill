@@ -45,6 +45,9 @@ and limitations.
 The library validators throw deterministic field-specific errors. The CLI
 prints the same error to standard error and exits nonzero for malformed input,
 tampered/inconsistent plans, or unsupported approval policy values.
+Command-line usage errors (unknown, duplicate, misplaced, or valueless options
+and unexpected positional arguments) print actionable help to standard error,
+exit with status `2`, and are rejected before any output artifact is created.
 
 ## Runnable Demo
 
