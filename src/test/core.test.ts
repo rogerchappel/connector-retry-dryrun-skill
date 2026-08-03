@@ -105,3 +105,36 @@ test('compiled CLI applies mutation boundaries to action logs', () => {
     assert.equal(JSON.parse(fs.readFileSync(output, 'utf8')).classification, classification, action);
   }
 });
+test('compiled CLI accepts documented plan and check forms', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'connector-retry-valid-cli-'));
+  const markdown = path.join(directory, 'plan.md');
+  const json = path.join(directory, 'plan.json');
+  const plan = spawnSync(process.execPath, ['dist/cli.js', 'plan', 'fixtures/slack-failure.json', '--out', markdown, '--json', json], { encoding: 'utf8' });
+  assert.equal(plan.status, 0, plan.stderr);
+  assert.equal(fs.existsSync(markdown), true);
+  assert.equal(fs.existsSync(json), true);
+  const check = spawnSync(process.execPath, ['dist/cli.js', 'check', json, '--require-approval', 'risky'], { encoding: 'utf8' });
+  assert.equal(check.status, 0, check.stderr);
+  assert.match(check.stdout, /retry plan check passed/);
+});
+test('compiled CLI rejects malformed command lines with usage status and no artifacts', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'connector-retry-invalid-cli-'));
+  const artifact = path.join(directory, 'must-not-exist.json');
+  const cases = [
+    { args: ['plan', 'fixtures/slack-failure.json', 'extra.json'], error: /unexpected positional argument/ },
+    { args: ['check', 'one.json', 'two.json'], error: /unexpected positional argument/ },
+    { args: ['plan', 'fixtures/slack-failure.json', '--unknown', 'value'], error: /option "--unknown" is not valid for plan/ },
+    { args: ['plan', 'fixtures/slack-failure.json', '--json', artifact, '--json', artifact], error: /duplicate option "--json"/ },
+    { args: ['check', 'plan.json', '--out', artifact], error: /option "--out" is not valid for check/ },
+    { args: ['plan', 'fixtures/slack-failure.json', '--require-approval', 'all'], error: /option "--require-approval" is not valid for plan/ },
+    { args: ['plan', 'fixtures/slack-failure.json', '--out', '--json', artifact], error: /option "--out" requires a value/ },
+    { args: ['check', 'plan.json', '--require-approval', '--out'], error: /option "--require-approval" requires a value/ },
+  ];
+  for (const item of cases) {
+    const result = spawnSync(process.execPath, ['dist/cli.js', ...item.args], { encoding: 'utf8' });
+    assert.equal(result.status, 2, `${item.args.join(' ')}: ${result.stderr}`);
+    assert.match(result.stderr, item.error);
+    assert.match(result.stderr, /usage: connector-retry-dryrun/);
+  }
+  assert.equal(fs.existsSync(artifact), false);
+});
