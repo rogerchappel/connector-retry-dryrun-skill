@@ -4,7 +4,8 @@ export interface ActionLog { connector: string; action: string; status?: string;
 export interface RetryPlan { source: string; connector: string; action: string; classification: RetryClass; approval: 'none' | 'recommended' | 'required'; rationale: string[]; idempotencyKey?: string | null; evidence: string[]; nextSteps: string[]; }
 const mutationVerbs = new Set([
   'post', 'send', 'comment', 'create', 'update', 'patch', 'put', 'upsert',
-  'add', 'delete', 'remove', 'archive', 'write', 'publish', 'upload'
+  'add', 'edit', 'set', 'move', 'delete', 'remove', 'archive', 'write',
+  'publish', 'upload'
 ]);
 const irreversibleVerbs = new Set(['delete', 'remove', 'archive']);
 const retryClasses: RetryClass[] = ['safe', 'needs_idempotency_key', 'needs_human_approval', 'do_not_retry'];
