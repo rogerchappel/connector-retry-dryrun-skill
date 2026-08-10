@@ -70,6 +70,18 @@ retry.
 
 Import from `connector-retry-dryrun-skill` to build local-first automation around the same deterministic planner.
 
+```js
+import { planFromLog } from "connector-retry-dryrun-skill";
+
+const plan = planFromLog("failed-action.json", {
+  connector: "github",
+  action: "issues.get",
+  status: "failed"
+});
+
+console.log(plan.classification); // safe
+```
+
 ## Safety Notes
 
 - No live connector calls.
