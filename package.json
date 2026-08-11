@@ -3,6 +3,14 @@
   "version": "0.1.0",
   "description": "Local-first retry planner for connector actions with idempotency and approval evidence.",
   "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "bin": {
     "connector-retry-dryrun": "dist/cli.js"
   },
