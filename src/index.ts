@@ -97,7 +97,7 @@ export function checkPlan(plan: RetryPlan, requireApproval: ApprovalPolicy = 'ri
   validateRetryPlan(plan);
   parseApprovalPolicy(requireApproval);
   const failures: string[] = [];
-  if (requireApproval === 'all' && plan.approval === 'none') failures.push('approval required for all plans but this plan has none');
+  if (requireApproval === 'all' && plan.approval === 'none') failures.push('approval policy "all" rejects safe plans because they have no approval requirement; use "risky" or "none" to accept a safe plan');
   if (requireApproval === 'risky' && ['needs_idempotency_key','needs_human_approval','do_not_retry'].includes(plan.classification) && plan.approval === 'none') failures.push('risky plan must include approval guidance');
   if (plan.classification === 'needs_idempotency_key' && plan.idempotencyKey) failures.push('classification says idempotency key is missing but key is present');
   if (plan.classification === 'do_not_retry') failures.push('plan is marked do_not_retry');
