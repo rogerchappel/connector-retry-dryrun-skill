@@ -14,7 +14,31 @@ npm run cli -- check .tmp/retry-plan.json --require-approval risky
 `npm run cli --` builds and runs the checkout's local CLI; no global install or
 package link is required.
 
-`--require-approval` accepts `none`, `risky` (the default), or `all`.
+`--require-approval` accepts `none`, `risky` (the default), or `all`:
+
+- `none` performs structural and retry-safety checks without imposing an
+  approval policy.
+- `risky` accepts generated safe plans and requires approval guidance on risky
+  plans.
+- `all` is an intentional rejecting gate for any plan without approval
+  guidance. Generated safe plans always have `approval: "none"`, so they fail
+  this policy with an actionable message and exit status `1`; use `risky` or
+  `none` when safe plans should be accepted. Do not edit a safe plan to add
+  approval: the schema deliberately rejects that inconsistent state.
+
+For example, the following generated safe plan passes `none` and `risky`, but
+is deliberately rejected by `all`:
+
+```bash
+printf '%s\n' '{"connector":"github","action":"issues.get","status":"failed"}' > .tmp/safe-log.json
+npm run cli -- plan .tmp/safe-log.json --json .tmp/safe-plan.json
+npm run cli -- check .tmp/safe-plan.json --require-approval none
+npm run cli -- check .tmp/safe-plan.json --require-approval risky
+if npm run cli -- check .tmp/safe-plan.json --require-approval all; then
+  echo 'unexpected: all accepted a plan without approval guidance' >&2
+  exit 1
+fi
+```
 
 ## JSON inputs
 

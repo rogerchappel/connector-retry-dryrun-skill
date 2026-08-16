@@ -86,6 +86,14 @@ test('checkPlan validates plans before applying policy', () => {
   const keyed = planFromLog('fixture.json', { connector: 'crm', action: 'contact.update', idempotencyKey: 'key-1' });
   assert.throws(() => checkPlan({ ...keyed, idempotencyKey: null }), /needs_human_approval classification requires a non-empty idempotencyKey/);
 });
+test('applies every approval policy consistently to generated safe plans', () => {
+  const safe = planFromLog('fixture.json', { connector: 'github', action: 'issues.get' });
+  assert.deepEqual(checkPlan(safe, 'none'), []);
+  assert.deepEqual(checkPlan(safe, 'risky'), []);
+  assert.deepEqual(checkPlan(safe, 'all'), [
+    'approval policy "all" rejects safe plans because they have no approval requirement; use "risky" or "none" to accept a safe plan',
+  ]);
+});
 test('compiled CLI rejects empty input, tampered plans, and unsupported approval policy', () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'connector-retry-test-'));
   const empty = path.join(directory, 'empty.json');
@@ -113,6 +121,23 @@ test('compiled CLI applies mutation boundaries to action logs', () => {
     assert.equal(result.status, 0, `${action}: ${result.stderr}`);
     assert.equal(JSON.parse(fs.readFileSync(output, 'utf8')).classification, classification, action);
   }
+});
+test('compiled CLI reports safe-plan outcomes for every approval policy', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'connector-retry-policies-'));
+  const input = path.join(directory, 'safe-log.json');
+  const output = path.join(directory, 'safe-plan.json');
+  fs.writeFileSync(input, JSON.stringify({ connector: 'github', action: 'issues.get', status: 'failed' }));
+  const plan = spawnSync(process.execPath, ['dist/cli.js', 'plan', input, '--json', output], { encoding: 'utf8' });
+  assert.equal(plan.status, 0, plan.stderr);
+  for (const policy of ['none', 'risky']) {
+    const check = spawnSync(process.execPath, ['dist/cli.js', 'check', output, '--require-approval', policy], { encoding: 'utf8' });
+    assert.equal(check.status, 0, `${policy}: ${check.stderr}`);
+    assert.match(check.stdout, /retry plan check passed/);
+  }
+  const all = spawnSync(process.execPath, ['dist/cli.js', 'check', output, '--require-approval', 'all'], { encoding: 'utf8' });
+  assert.equal(all.status, 1);
+  assert.match(all.stderr, /policy "all" rejects safe plans/);
+  assert.match(all.stderr, /use "risky" or "none"/);
 });
 test('compiled CLI accepts documented plan and check forms', () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'connector-retry-valid-cli-'));
