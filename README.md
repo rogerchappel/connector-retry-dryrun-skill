@@ -47,6 +47,15 @@ An action log must be a JSON object with non-empty string `connector` and
 non-empty strings (`idempotencyKey` may also be `null`); `payload` must be an
 object, and `evidence` must be an array of non-empty strings.
 
+Status matching is case-insensitive and ignores surrounding whitespace.
+`success`, `succeeded`, `successful`, `complete`, and `completed` mean the
+action already finished successfully. These records always produce a
+`do_not_retry` plan, before read-only, mutation, or idempotency heuristics are
+considered, because retrying completed work can duplicate effects. Other
+statuses, including `failed`, continue through the normal action and
+idempotency classification. Unknown non-empty statuses are accepted as
+provider evidence and do not imply completion.
+
 A saved retry plan must contain non-empty string `source`, `connector`, and
 `action` fields; a supported `classification` and `approval`; non-empty string
 arrays for `rationale` and `nextSteps`; and a string array for `evidence`.

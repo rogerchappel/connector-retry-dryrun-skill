@@ -60,6 +60,27 @@ test('keeps keyed remove and archive actions non-retryable', () => {
     assert.equal(plan.approval, 'required', action);
   }
 });
+test('blocks retries for successful and completed records before action heuristics', () => {
+  for (const status of ['success', 'succeeded', 'successful', 'complete', 'completed', ' COMPLETED ']) {
+    for (const input of [
+      { connector: 'test', action: 'messages.get', status },
+      { connector: 'test', action: 'post_message', status },
+      { connector: 'test', action: 'post_message', status, idempotencyKey: 'already-done' },
+    ]) {
+      const plan = planFromLog('fixture.json', input);
+      assert.equal(plan.classification, 'do_not_retry', `${status}: ${input.action}`);
+      assert.equal(plan.approval, 'required');
+      assert.match(plan.rationale[0], /successful completion/);
+      assert.match(plan.nextSteps[0], /Do not retry/);
+      assert.deepEqual(checkPlan(plan), ['plan is marked do_not_retry']);
+    }
+  }
+});
+test('continues normal retry classification for failed records', () => {
+  assert.equal(planFromLog('fixture.json', { connector: 'test', action: 'messages.get', status: 'failed' }).classification, 'safe');
+  assert.equal(planFromLog('fixture.json', { connector: 'test', action: 'post_message', status: 'failed' }).classification, 'needs_idempotency_key');
+  assert.equal(planFromLog('fixture.json', { connector: 'test', action: 'post_message', status: 'failed', idempotencyKey: 'retry-1' }).classification, 'needs_human_approval');
+});
 test('validates every checked-in action log fixture', () => {
   for (const file of fs.readdirSync('fixtures').filter((name) => name.endsWith('.json'))) {
     assert.doesNotThrow(() => validateActionLog(JSON.parse(fs.readFileSync(path.join('fixtures', file), 'utf8'))));
@@ -120,6 +141,22 @@ test('compiled CLI applies mutation boundaries to action logs', () => {
     const result = spawnSync(process.execPath, ['dist/cli.js', 'plan', input, '--json', output], { encoding: 'utf8' });
     assert.equal(result.status, 0, `${action}: ${result.stderr}`);
     assert.equal(JSON.parse(fs.readFileSync(output, 'utf8')).classification, classification, action);
+  }
+});
+test('compiled CLI emits blocked plans for completed actions and retry plans for failures', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'connector-retry-statuses-'));
+  const cases = [
+    { name: 'completed-read', log: { connector: 'test', action: 'messages.get', status: 'completed' }, classification: 'do_not_retry' },
+    { name: 'succeeded-mutation-keyed', log: { connector: 'test', action: 'post_message', status: 'succeeded', idempotencyKey: 'done-1' }, classification: 'do_not_retry' },
+    { name: 'failed-mutation-keyed', log: { connector: 'test', action: 'post_message', status: 'failed', idempotencyKey: 'retry-1' }, classification: 'needs_human_approval' },
+  ];
+  for (const item of cases) {
+    const input = path.join(directory, `${item.name}.json`);
+    const output = path.join(directory, `${item.name}-plan.json`);
+    fs.writeFileSync(input, JSON.stringify(item.log));
+    const result = spawnSync(process.execPath, ['dist/cli.js', 'plan', input, '--json', output], { encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(JSON.parse(fs.readFileSync(output, 'utf8')).classification, item.classification);
   }
 });
 test('compiled CLI reports safe-plan outcomes for every approval policy', () => {

@@ -11,6 +11,7 @@ const irreversibleVerbs = new Set(['delete', 'remove', 'archive']);
 const retryClasses: RetryClass[] = ['safe', 'needs_idempotency_key', 'needs_human_approval', 'do_not_retry'];
 const approvals: RetryPlan['approval'][] = ['none', 'recommended', 'required'];
 const approvalPolicies: ApprovalPolicy[] = ['none', 'risky', 'all'];
+const completedStatuses = new Set(['success', 'succeeded', 'successful', 'complete', 'completed']);
 function object(value: unknown, label: string): asserts value is Record<string, unknown> {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) throw new Error(`${label} must be an object`);
 }
@@ -73,6 +74,11 @@ export function classify(log: ActionLog): Omit<RetryPlan,'source'> {
   const segments = actionSegments(action);
   const mutates = segments.some((segment) => mutationVerbs.has(segment));
   const hasKey = Boolean(log.idempotencyKey);
+  const normalizedStatus = log.status?.trim().toLowerCase();
+  if (normalizedStatus && completedStatuses.has(normalizedStatus)) {
+    rationale.push(`Action status "${log.status}" records successful completion, so another attempt could duplicate work.`);
+    return { connector, action, classification:'do_not_retry', approval:'required', rationale, idempotencyKey:log.idempotencyKey ?? null, evidence, nextSteps:['Do not retry a successfully completed action. Preserve the completion record as evidence.'] };
+  }
   if (segments.some((segment) => irreversibleVerbs.has(segment))) {
     rationale.push('Delete-like or archival operations are irreversible without live provider state.');
     return { connector, action, classification:'do_not_retry', approval:'required', rationale, idempotencyKey:log.idempotencyKey ?? null, evidence, nextSteps:['Do not retry automatically. Ask a human owner to inspect provider state.'] };
