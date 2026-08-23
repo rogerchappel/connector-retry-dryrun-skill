@@ -19,12 +19,16 @@ const actionCases = [
   ['setContact', 'needs_idempotency_key'],
   ['files.move', 'needs_idempotency_key'],
   ['moveFile', 'needs_idempotency_key'],
+  ['CRMWrite', 'needs_idempotency_key'],
   ['messages.delete', 'do_not_retry'],
   ['files.remove', 'do_not_retry'],
   ['removeFile', 'do_not_retry'],
   ['messages_archive', 'do_not_retry'],
   ['archiveMessage', 'do_not_retry'],
+  ['HTTPDelete', 'do_not_retry'],
   ['messages.get', 'safe'],
+  ['CRMRead', 'safe'],
+  ['HTTPGet', 'safe'],
   ['files.list', 'safe'],
   ['reports.getPostmortem', 'safe'],
   ['contacts.dispatch', 'safe'],
@@ -47,7 +51,7 @@ test('classifies boundary-delimited mutation verbs without read-name false posit
 test('classifies mutation without idempotency as approval gated', () => { const log = JSON.parse(fs.readFileSync('fixtures/slack-failure.json','utf8')); const plan = planFromLog('fixtures/slack-failure.json', log); assert.equal(plan.classification, 'needs_idempotency_key'); assert.equal(checkPlan(plan).length, 0); });
 test('classifies keyed update with approval guidance', () => { const log = JSON.parse(fs.readFileSync('fixtures/crm-update.json','utf8')); const plan = planFromLog('fixtures/crm-update.json', log); assert.equal(plan.classification, 'needs_human_approval'); assert.equal(plan.approval, 'recommended'); });
 test('classifies keyed reversible mutations with approval guidance', () => {
-  for (const action of ['contacts.patch', 'putRecord', 'records-upsert', 'members.add', 'addMember', 'messages.edit', 'setContact', 'files.move']) {
+  for (const action of ['contacts.patch', 'putRecord', 'records-upsert', 'members.add', 'addMember', 'messages.edit', 'setContact', 'files.move', 'CRMWrite']) {
     const plan = planFromLog('fixture.json', { connector: 'test', action, idempotencyKey: 'key-1' });
     assert.equal(plan.classification, 'needs_human_approval', action);
     assert.equal(plan.approval, 'recommended', action);
