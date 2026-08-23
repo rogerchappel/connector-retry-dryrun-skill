@@ -4,8 +4,10 @@ The package is local-first. Planning commands can write report files only when t
 
 ## Action-name heuristic
 
-The planner splits action names at punctuation, underscores, and camel-case
-boundaries. A segment equal to `post`, `send`, `comment`, `create`, `update`,
+The planner splits action names at punctuation, underscores, camel-case, and
+acronym-to-word boundaries. For example, it separates `CRMWrite` and
+`HTTPDelete` while leaving read-like `CRMRead` safe. A segment equal to `post`,
+`send`, `comment`, `create`, `update`,
 `patch`, `put`, `upsert`, `add`, `delete`, `remove`, `archive`, `write`,
 `edit`, `set`, `move`, `publish`, or `upload` is treated as a mutation. Delete,
 remove, and archive actions are classified as `do_not_retry` even when an

@@ -72,7 +72,9 @@ Mutation detection recognizes boundary-delimited action verbs including
 `add`, `edit`, `set`, `move`, `delete`, `remove`, `archive`, `write`, `publish`,
 and `upload`. `delete`, `remove`, and `archive` are classified as
 `do_not_retry`; the other mutation verbs follow the idempotency-key policy
-above. See
+above. Camel/Pascal names split both ordinary word transitions (`crmWrite`)
+and acronym-to-word transitions (`CRMWrite`, `HTTPDelete`); acronym-containing
+read actions such as `CRMRead` remain safe. See
 [the safety model](docs/SAFETY.md#action-name-heuristic) for boundary examples
 and limitations.
 

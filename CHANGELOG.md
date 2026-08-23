@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Recognize mutation verbs after acronym prefixes in camel/Pascal action names.
 - Define `--require-approval all` as an intentional rejecting gate for safe
   plans and report the policies that can accept them.
 
