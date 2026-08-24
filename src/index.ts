@@ -5,9 +5,9 @@ export interface RetryPlan { source: string; connector: string; action: string; 
 const mutationVerbs = new Set([
   'post', 'send', 'comment', 'create', 'update', 'patch', 'put', 'upsert',
   'add', 'edit', 'set', 'move', 'delete', 'remove', 'archive', 'write',
-  'publish', 'upload'
+  'publish', 'upload', 'reply', 'close', 'disable', 'cancel'
 ]);
-const irreversibleVerbs = new Set(['delete', 'remove', 'archive']);
+const irreversibleVerbs = new Set(['delete', 'remove', 'archive', 'close', 'disable', 'cancel']);
 const retryClasses: RetryClass[] = ['safe', 'needs_idempotency_key', 'needs_human_approval', 'do_not_retry'];
 const approvals: RetryPlan['approval'][] = ['none', 'recommended', 'required'];
 const approvalPolicies: ApprovalPolicy[] = ['none', 'risky', 'all'];
@@ -81,7 +81,7 @@ export function classify(log: ActionLog): Omit<RetryPlan,'source'> {
     return { connector, action, classification:'do_not_retry', approval:'required', rationale, idempotencyKey:log.idempotencyKey ?? null, evidence, nextSteps:['Do not retry a successfully completed action. Preserve the completion record as evidence.'] };
   }
   if (segments.some((segment) => irreversibleVerbs.has(segment))) {
-    rationale.push('Delete-like or archival operations are irreversible without live provider state.');
+    rationale.push('Destructive or state-closing operations are irreversible without live provider state.');
     return { connector, action, classification:'do_not_retry', approval:'required', rationale, idempotencyKey:log.idempotencyKey ?? null, evidence, nextSteps:['Do not retry automatically. Ask a human owner to inspect provider state.'] };
   }
   if (!mutates) {

@@ -49,7 +49,7 @@ const actionCases = [
   ['contacts.settings', 'safe'],
   ['files.movement', 'safe'],
   ['reports.closedAt', 'safe'],
-  ['messages.replyTo', 'safe'],
+  ['messages.replies.list', 'safe'],
   ['users.disabledList', 'safe'],
   ['calendar.cancellationPolicy', 'safe'],
 ] as const;
