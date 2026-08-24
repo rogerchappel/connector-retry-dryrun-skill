@@ -20,12 +20,20 @@ const actionCases = [
   ['files.move', 'needs_idempotency_key'],
   ['moveFile', 'needs_idempotency_key'],
   ['CRMWrite', 'needs_idempotency_key'],
+  ['messages.reply', 'needs_idempotency_key'],
+  ['replyMessage', 'needs_idempotency_key'],
   ['messages.delete', 'do_not_retry'],
   ['files.remove', 'do_not_retry'],
   ['removeFile', 'do_not_retry'],
   ['messages_archive', 'do_not_retry'],
   ['archiveMessage', 'do_not_retry'],
   ['HTTPDelete', 'do_not_retry'],
+  ['issues.close', 'do_not_retry'],
+  ['closeIssue', 'do_not_retry'],
+  ['users.disable', 'do_not_retry'],
+  ['disableUser', 'do_not_retry'],
+  ['calendar.cancel', 'do_not_retry'],
+  ['cancelEvent', 'do_not_retry'],
   ['messages.get', 'safe'],
   ['CRMRead', 'safe'],
   ['HTTPGet', 'safe'],
@@ -40,6 +48,10 @@ const actionCases = [
   ['messages.credit', 'safe'],
   ['contacts.settings', 'safe'],
   ['files.movement', 'safe'],
+  ['reports.closedAt', 'safe'],
+  ['messages.replyTo', 'safe'],
+  ['users.disabledList', 'safe'],
+  ['calendar.cancellationPolicy', 'safe'],
 ] as const;
 test('classifies boundary-delimited mutation verbs without read-name false positives', () => {
   for (const [action, classification] of actionCases) {
@@ -57,8 +69,8 @@ test('classifies keyed reversible mutations with approval guidance', () => {
     assert.equal(plan.approval, 'recommended', action);
   }
 });
-test('keeps keyed remove and archive actions non-retryable', () => {
-  for (const action of ['files.remove', 'archiveMessage']) {
+test('keeps keyed irreversible actions non-retryable', () => {
+  for (const action of ['files.remove', 'archiveMessage', 'closeIssue', 'users.disable', 'cancelEvent']) {
     const plan = planFromLog('fixture.json', { connector: 'test', action, idempotencyKey: 'key-1' });
     assert.equal(plan.classification, 'do_not_retry', action);
     assert.equal(plan.approval, 'required', action);
