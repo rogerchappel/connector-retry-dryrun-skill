@@ -123,6 +123,41 @@ test('checkPlan validates plans before applying policy', () => {
   const keyed = planFromLog('fixture.json', { connector: 'crm', action: 'contact.update', idempotencyKey: 'key-1' });
   assert.throws(() => checkPlan({ ...keyed, idempotencyKey: null }), /needs_human_approval classification requires a non-empty idempotencyKey/);
 });
+test('renderMarkdown keeps multiline and Markdown controls inside their fields', () => {
+  const plan = planFromLog('logs/[retry] #1.json\n## forged heading', {
+    connector: 'demo_*connector*\n- forged item',
+    action: 'messages.get\n1. forged step',
+    evidence: ['first line\n## Unexpected section', '[ordinary proof](https://example.test)'],
+  });
+  plan.rationale = ['Read-only **rationale**\n> forged quote'];
+  plan.nextSteps = ['Review `output`\n- forged next step'];
+  const markdown = renderMarkdown(plan);
+  assert.match(markdown, /Source: logs\/\\\[retry\\\] \\#1\\\.json \\#\\# forged heading/);
+  assert.match(markdown, /Connector: demo\\_\\\*connector\\\* \\\- forged item/);
+  assert.match(markdown, /Action: messages\\\.get 1\\\. forged step/);
+  assert.match(markdown, /- first line \\#\\# Unexpected section/);
+  assert.match(markdown, /- \\\[ordinary proof\\\]\\\(https:\/\/example\\\.test\\\)/);
+  assert.match(markdown, /- Read\\-only \\\*\\\*rationale\\\*\\\* \\> forged quote/);
+  assert.match(markdown, /- Review \\`output\\` \\\- forged next step/);
+  assert.equal(markdown.match(/^## /gm)?.length, 3);
+  assert.equal(markdown.match(/^- /gm)?.length, 4);
+});
+test('compiled CLI renders hostile log text as literal single-line field content', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'connector-retry-markdown-'));
+  const input = path.join(directory, 'hostile-log.json');
+  fs.writeFileSync(input, JSON.stringify({
+    connector: 'demo\n## Connector heading',
+    action: 'messages.get\n- action item',
+    evidence: ['proof\n1. evidence item', '**bold evidence**'],
+  }));
+  const result = spawnSync(process.execPath, ['dist/cli.js', 'plan', input], { encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Connector: demo \\#\\# Connector heading/);
+  assert.match(result.stdout, /Action: messages\\\.get \\\- action item/);
+  assert.match(result.stdout, /- proof 1\\\. evidence item/);
+  assert.match(result.stdout, /- \\\*\\\*bold evidence\\\*\\\*/);
+  assert.equal(result.stdout.match(/^## /gm)?.length, 3);
+});
 test('applies every approval policy consistently to generated safe plans', () => {
   const safe = planFromLog('fixture.json', { connector: 'github', action: 'issues.get' });
   assert.deepEqual(checkPlan(safe, 'none'), []);

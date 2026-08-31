@@ -102,6 +102,15 @@ CRM fixture includes an idempotency key, so it is classified as
 The demo renders both Markdown plans to standard output and does not execute a
 retry.
 
+### Markdown rendering contract
+
+Plan-derived text is rendered as literal field or list-item content. Line
+breaks and other whitespace are collapsed to a single space, and Markdown
+control characters are backslash-escaped. A connector, action, rationale,
+evidence, source, or next-step value therefore cannot introduce a heading,
+list item, link, or inline formatting into the generated plan. Ordinary text
+remains readable; use the JSON plan when exact original whitespace is needed.
+
 ## Library
 
 Import from `connector-retry-dryrun-skill` to build local-first automation around the same deterministic planner.
