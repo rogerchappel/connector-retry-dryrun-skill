@@ -96,9 +96,15 @@ export function classify(log: ActionLog): Omit<RetryPlan,'source'> {
   return { connector, action, classification:'needs_idempotency_key', approval:'required', rationale, idempotencyKey:null, evidence, nextSteps:['Create or recover a stable idempotency key.', 'Get human approval before retrying.'] };
 }
 export function planFromLog(source: string, log: ActionLog): RetryPlan { text(source, 'retry plan.source'); return { source, ...classify(log) }; }
+function markdownText(value: string): string {
+  return value
+    .replace(/\s+/gu, ' ')
+    .trim()
+    .replace(/([\\`*_\[\]{}()<>#+\-.!|])/g, '\\$1');
+}
 export function renderMarkdown(plan: RetryPlan): string {
   validateRetryPlan(plan);
-  return ['# Connector Retry Dry-Run Plan','',`Source: ${plan.source}`,`Connector: ${plan.connector}`,`Action: ${plan.action}`,`Classification: ${plan.classification}`,`Approval: ${plan.approval}`,'','## Rationale',...plan.rationale.map((item)=>`- ${item}`),'','## Evidence',...(plan.evidence.length ? plan.evidence.map((item)=>`- ${item}`) : ['- none recorded']),'','## Next Steps',...plan.nextSteps.map((item)=>`- ${item}`),''].join('\n');
+  return ['# Connector Retry Dry-Run Plan','',`Source: ${markdownText(plan.source)}`,`Connector: ${markdownText(plan.connector)}`,`Action: ${markdownText(plan.action)}`,`Classification: ${plan.classification}`,`Approval: ${plan.approval}`,'','## Rationale',...plan.rationale.map((item)=>`- ${markdownText(item)}`),'','## Evidence',...(plan.evidence.length ? plan.evidence.map((item)=>`- ${markdownText(item)}`) : ['- none recorded']),'','## Next Steps',...plan.nextSteps.map((item)=>`- ${markdownText(item)}`),''].join('\n');
 }
 export function checkPlan(plan: RetryPlan, requireApproval: ApprovalPolicy = 'risky'): string[] {
   validateRetryPlan(plan);
