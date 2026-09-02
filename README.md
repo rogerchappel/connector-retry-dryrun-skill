@@ -52,9 +52,12 @@ Status matching is case-insensitive and ignores surrounding whitespace.
 action already finished successfully. These records always produce a
 `do_not_retry` plan, before read-only, mutation, or idempotency heuristics are
 considered, because retrying completed work can duplicate effects. Other
-statuses, including `failed`, continue through the normal action and
-idempotency classification. Unknown non-empty statuses are accepted as
-provider evidence and do not imply completion.
+terminal statuses, including `failed`, continue through the normal action and
+idempotency classification. The in-flight statuses `pending`, `queued`,
+`running`, and `in_progress` always produce a `do_not_retry` plan with guidance
+to wait for a terminal status and inspect provider state; an idempotency key
+does not make a concurrent attempt safe. Unknown non-empty statuses are
+accepted as provider evidence and do not imply completion or in-flight work.
 
 A saved retry plan must contain non-empty string `source`, `connector`, and
 `action` fields; a supported `classification` and `approval`; non-empty string

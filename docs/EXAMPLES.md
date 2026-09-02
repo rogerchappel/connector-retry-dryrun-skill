@@ -14,6 +14,12 @@ the missing idempotency key blocks a blind retry. In the CRM update case, the
 existing key permits a one-attempt retry only after checking provider state and
 getting the recommended human approval.
 
+An action recorded as `pending`, `queued`, `running`, or `in_progress` is
+different from a terminal failure: the planner returns `do_not_retry` and tells
+the operator to wait and inspect provider state. It never recommends a second
+attempt while the first may still be active, regardless of idempotency-key
+availability.
+
 ## Save and Check a Plan
 
 ```bash
