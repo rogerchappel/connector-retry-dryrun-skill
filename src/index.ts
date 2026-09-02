@@ -12,6 +12,7 @@ const retryClasses: RetryClass[] = ['safe', 'needs_idempotency_key', 'needs_huma
 const approvals: RetryPlan['approval'][] = ['none', 'recommended', 'required'];
 const approvalPolicies: ApprovalPolicy[] = ['none', 'risky', 'all'];
 const completedStatuses = new Set(['success', 'succeeded', 'successful', 'complete', 'completed']);
+const inFlightStatuses = new Set(['pending', 'queued', 'running', 'in_progress']);
 function object(value: unknown, label: string): asserts value is Record<string, unknown> {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) throw new Error(`${label} must be an object`);
 }
@@ -79,6 +80,22 @@ export function classify(log: ActionLog): Omit<RetryPlan,'source'> {
   if (normalizedStatus && completedStatuses.has(normalizedStatus)) {
     rationale.push(`Action status "${log.status}" records successful completion, so another attempt could duplicate work.`);
     return { connector, action, classification:'do_not_retry', approval:'required', rationale, idempotencyKey:log.idempotencyKey ?? null, evidence, nextSteps:['Do not retry a successfully completed action. Preserve the completion record as evidence.'] };
+  }
+  if (normalizedStatus && inFlightStatuses.has(normalizedStatus)) {
+    rationale.push(`Action status "${log.status}" indicates the original action may still be active.`);
+    return {
+      connector,
+      action,
+      classification: 'do_not_retry',
+      approval: 'required',
+      rationale,
+      idempotencyKey: log.idempotencyKey ?? null,
+      evidence,
+      nextSteps: [
+        'Wait for a terminal status before considering another attempt.',
+        'Inspect provider state and preserve the original action evidence.',
+      ],
+    };
   }
   if (segments.some((segment) => irreversibleVerbs.has(segment))) {
     rationale.push('Destructive or state-closing operations are irreversible without live provider state.');

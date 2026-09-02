@@ -97,6 +97,23 @@ test('continues normal retry classification for failed records', () => {
   assert.equal(planFromLog('fixture.json', { connector: 'test', action: 'post_message', status: 'failed' }).classification, 'needs_idempotency_key');
   assert.equal(planFromLog('fixture.json', { connector: 'test', action: 'post_message', status: 'failed', idempotencyKey: 'retry-1' }).classification, 'needs_human_approval');
 });
+test('blocks retries while actions have an in-flight status', () => {
+  for (const status of ['pending', 'queued', 'running', 'in_progress', ' PENDING ']) {
+    const plan = planFromLog('fixture.json', {
+      connector: 'crm',
+      action: 'contact.update',
+      status,
+      idempotencyKey: 'retry-1',
+    });
+    assert.equal(plan.classification, 'do_not_retry', status);
+    assert.equal(plan.approval, 'required', status);
+    assert.match(plan.rationale[0], /may still be active/, status);
+    assert.match(plan.nextSteps.join(' '), /Wait for a terminal status/, status);
+    assert.match(plan.nextSteps.join(' '), /Inspect provider state/, status);
+    assert.doesNotMatch(plan.nextSteps.join(' '), /Retry once/, status);
+    assert.deepEqual(checkPlan(plan), ['plan is marked do_not_retry'], status);
+  }
+});
 test('validates every checked-in action log fixture', () => {
   for (const file of fs.readdirSync('fixtures').filter((name) => name.endsWith('.json'))) {
     assert.doesNotThrow(() => validateActionLog(JSON.parse(fs.readFileSync(path.join('fixtures', file), 'utf8'))));
@@ -194,11 +211,16 @@ test('compiled CLI applies mutation boundaries to action logs', () => {
     assert.equal(JSON.parse(fs.readFileSync(output, 'utf8')).classification, classification, action);
   }
 });
-test('compiled CLI emits blocked plans for completed actions and retry plans for failures', () => {
+test('compiled CLI emits blocked plans for completed and in-flight actions and retry plans for failures', () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'connector-retry-statuses-'));
   const cases = [
     { name: 'completed-read', log: { connector: 'test', action: 'messages.get', status: 'completed' }, classification: 'do_not_retry' },
     { name: 'succeeded-mutation-keyed', log: { connector: 'test', action: 'post_message', status: 'succeeded', idempotencyKey: 'done-1' }, classification: 'do_not_retry' },
+    ...['pending', 'queued', 'running', 'in_progress'].map((status) => ({
+      name: `${status}-mutation-keyed`,
+      log: { connector: 'test', action: 'post_message', status, idempotencyKey: 'retry-1' },
+      classification: 'do_not_retry',
+    })),
     { name: 'failed-mutation-keyed', log: { connector: 'test', action: 'post_message', status: 'failed', idempotencyKey: 'retry-1' }, classification: 'needs_human_approval' },
   ];
   for (const item of cases) {
@@ -207,7 +229,12 @@ test('compiled CLI emits blocked plans for completed actions and retry plans for
     fs.writeFileSync(input, JSON.stringify(item.log));
     const result = spawnSync(process.execPath, ['dist/cli.js', 'plan', input, '--json', output], { encoding: 'utf8' });
     assert.equal(result.status, 0, result.stderr);
-    assert.equal(JSON.parse(fs.readFileSync(output, 'utf8')).classification, item.classification);
+    const generated = JSON.parse(fs.readFileSync(output, 'utf8'));
+    assert.equal(generated.classification, item.classification);
+    if (['pending', 'queued', 'running', 'in_progress'].includes(item.log.status)) {
+      assert.match(generated.nextSteps.join(' '), /Wait for a terminal status/);
+      assert.doesNotMatch(generated.nextSteps.join(' '), /Retry once/);
+    }
   }
 });
 test('compiled CLI reports safe-plan outcomes for every approval policy', () => {

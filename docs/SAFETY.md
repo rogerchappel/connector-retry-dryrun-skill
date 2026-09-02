@@ -2,6 +2,16 @@
 
 The package is local-first. Planning commands can write report files only when the caller provides output paths. Any external write, provider retry, fixture rewrite, publication, or merge remains outside this tool and requires explicit approval.
 
+## In-flight actions
+
+Statuses `pending`, `queued`, `running`, and `in_progress` mean the original
+action may still complete. The planner blocks another attempt as
+`do_not_retry`, even when the log includes an idempotency key. Wait for a
+terminal status, inspect provider state, and preserve the original action
+evidence before applying the normal retry classification to a terminal
+failure. Successful/completed statuses remain non-retryable because repeating
+finished work can duplicate effects.
+
 ## Action-name heuristic
 
 The planner splits action names at punctuation, underscores, camel-case, and
