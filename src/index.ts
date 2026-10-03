@@ -13,6 +13,7 @@ const approvals: RetryPlan['approval'][] = ['none', 'recommended', 'required'];
 const approvalPolicies: ApprovalPolicy[] = ['none', 'risky', 'all'];
 const completedStatuses = new Set(['success', 'succeeded', 'successful', 'complete', 'completed']);
 const inFlightStatuses = new Set(['pending', 'queued', 'running', 'in_progress']);
+const knownStatuses = new Set(['failed', 'failure', 'error', 'errored', 'timeout', 'timed_out', ...completedStatuses, ...inFlightStatuses]);
 function object(value: unknown, label: string): asserts value is Record<string, unknown> {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) throw new Error(`${label} must be an object`);
 }
@@ -32,6 +33,9 @@ export function validateActionLog(value: unknown): asserts value is ActionLog {
   text(value.connector, 'action log.connector');
   text(value.action, 'action log.action');
   optionalText(value.status, 'action log.status');
+  if (typeof value.status === 'string' && !knownStatuses.has(value.status.trim().toLowerCase())) {
+    throw new Error(`action log.status must be one of: ${[...knownStatuses].join(', ')}`);
+  }
   optionalText(value.error, 'action log.error');
   if (value.payload !== undefined) object(value.payload, 'action log.payload');
   if (value.evidence !== undefined) stringList(value.evidence, 'action log.evidence', true);
