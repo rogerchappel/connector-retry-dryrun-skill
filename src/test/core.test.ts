@@ -97,6 +97,15 @@ test('continues normal retry classification for failed records', () => {
   assert.equal(planFromLog('fixture.json', { connector: 'test', action: 'post_message', status: 'failed' }).classification, 'needs_idempotency_key');
   assert.equal(planFromLog('fixture.json', { connector: 'test', action: 'post_message', status: 'failed', idempotencyKey: 'retry-1' }).classification, 'needs_human_approval');
 });
+test('rejects unknown provider statuses instead of recommending retries', () => {
+  for (const status of ['unknown', 'processing-ish', 'cancelled_by_provider', ' SUCCESSFUL? ']) {
+    for (const action of ['messages.get', 'post_message']) {
+      const log = { connector: 'crm', action, status };
+      assert.throws(() => validateActionLog(log), /action log\.status must be one of/);
+      assert.throws(() => planFromLog('fixture.json', log), /action log\.status must be one of/);
+    }
+  }
+});
 test('blocks retries while actions have an in-flight status', () => {
   for (const status of ['pending', 'queued', 'running', 'in_progress', ' PENDING ']) {
     const plan = planFromLog('fixture.json', {
