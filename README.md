@@ -137,6 +137,10 @@ console.log(plan.classification); // safe
 - No publishing, tagging, or release creation.
 - Treat generated Markdown and JSON as review evidence, not execution approval.
 
+## Feedback
+
+This project does not collect telemetry. See [how to share feedback](docs/FEEDBACK.md) for the voluntary issue/PR path and privacy guidance. No external user observations have been collected yet.
+
 ## Limitations
 
 V1 uses conservative heuristics and fixture inputs. Provider-specific state should still be checked by a human before risky external actions.
