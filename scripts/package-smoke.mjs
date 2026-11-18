@@ -14,10 +14,10 @@ try {
   const files = new Set(pack.files.map((file) => file.path));
 
   const required = [
-    "dist/cli.js",
-    "dist/cli.d.ts",
-    "dist/index.js",
-    "dist/index.d.ts",
+    "dist/src/cli.js",
+    "dist/src/cli.d.ts",
+    "dist/src/index.js",
+    "dist/src/index.d.ts",
     "README.md",
     "SKILL.md",
     "LICENSE",
@@ -27,8 +27,8 @@ try {
     "scripts/smoke.sh"
   ];
   const forbidden = [
-    "dist/test/core.test.js",
-    "dist/test/core.test.d.ts",
+    "dist/src/test/core.test.js",
+    "dist/src/test/core.test.d.ts",
     "src/cli.ts",
     "src/index.ts"
   ];
