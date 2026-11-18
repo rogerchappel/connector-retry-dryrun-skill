@@ -1,4 +1,7 @@
-import test from 'node:test'; import assert from 'node:assert/strict'; import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path'; import { spawnSync } from 'node:child_process';
+import test from 'node:test'; import assert from 'node:assert/strict'; import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path'; import { spawnSync } from 'node:child_process'; import { fileURLToPath } from 'node:url';
+const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+const cliPath = path.join(projectRoot, 'dist/src/cli.js');
+const fixturePath = path.join(projectRoot, 'fixtures/slack-failure.json');
 import { planFromLog, renderMarkdown, checkPlan, validateActionLog, validateRetryPlan } from '../index.js';
 const actionCases = [
   ['post_message', 'needs_idempotency_key'],
@@ -60,8 +63,8 @@ test('classifies boundary-delimited mutation verbs without read-name false posit
     assert.equal(plan.approval === 'none', classification === 'safe', action);
   }
 });
-test('classifies mutation without idempotency as approval gated', () => { const log = JSON.parse(fs.readFileSync('fixtures/slack-failure.json','utf8')); const plan = planFromLog('fixtures/slack-failure.json', log); assert.equal(plan.classification, 'needs_idempotency_key'); assert.equal(checkPlan(plan).length, 0); });
-test('classifies keyed update with approval guidance', () => { const log = JSON.parse(fs.readFileSync('fixtures/crm-update.json','utf8')); const plan = planFromLog('fixtures/crm-update.json', log); assert.equal(plan.classification, 'needs_human_approval'); assert.equal(plan.approval, 'recommended'); });
+test('classifies mutation without idempotency as approval gated', () => { const log = JSON.parse(fs.readFileSync(fixturePath,'utf8')); const plan = planFromLog('fixtures/slack-failure.json', log); assert.equal(plan.classification, 'needs_idempotency_key'); assert.equal(checkPlan(plan).length, 0); });
+test('classifies keyed update with approval guidance', () => { const log = JSON.parse(fs.readFileSync(path.join(projectRoot, 'fixtures/crm-update.json'),'utf8')); const plan = planFromLog('fixtures/crm-update.json', log); assert.equal(plan.classification, 'needs_human_approval'); assert.equal(plan.approval, 'recommended'); });
 test('classifies keyed reversible mutations with approval guidance', () => {
   for (const action of ['contacts.patch', 'putRecord', 'records-upsert', 'members.add', 'addMember', 'messages.edit', 'setContact', 'files.move', 'CRMWrite']) {
     const plan = planFromLog('fixture.json', { connector: 'test', action, idempotencyKey: 'key-1' });
@@ -124,8 +127,8 @@ test('blocks retries while actions have an in-flight status', () => {
   }
 });
 test('validates every checked-in action log fixture', () => {
-  for (const file of fs.readdirSync('fixtures').filter((name) => name.endsWith('.json'))) {
-    assert.doesNotThrow(() => validateActionLog(JSON.parse(fs.readFileSync(path.join('fixtures', file), 'utf8'))));
+  for (const file of fs.readdirSync(path.join(projectRoot, 'fixtures')).filter((name) => name.endsWith('.json'))) {
+    assert.doesNotThrow(() => validateActionLog(JSON.parse(fs.readFileSync(path.join(projectRoot, 'fixtures', file), 'utf8'))));
   }
 });
 test('rejects missing and malformed action log fields', () => {
@@ -176,7 +179,7 @@ test('compiled CLI renders hostile log text as literal single-line field content
     action: 'messages.get\n- action item',
     evidence: ['proof\n1. evidence item', '**bold evidence**'],
   }));
-  const result = spawnSync(process.execPath, ['dist/cli.js', 'plan', input], { encoding: 'utf8' });
+  const result = spawnSync(process.execPath, [cliPath, 'plan', input], { encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /Connector: demo \\#\\# Connector heading/);
   assert.match(result.stdout, /Action: messages\\\.get \\\- action item/);
@@ -196,16 +199,16 @@ test('compiled CLI rejects empty input, tampered plans, and unsupported approval
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'connector-retry-test-'));
   const empty = path.join(directory, 'empty.json');
   fs.writeFileSync(empty, '{}\n');
-  const planResult = spawnSync(process.execPath, ['dist/cli.js', 'plan', empty], { encoding: 'utf8' });
+  const planResult = spawnSync(process.execPath, [cliPath, 'plan', empty], { encoding: 'utf8' });
   assert.notEqual(planResult.status, 0);
   assert.match(planResult.stderr, /action log\.connector must be a non-empty string/);
-  const checkResult = spawnSync(process.execPath, ['dist/cli.js', 'check', empty], { encoding: 'utf8' });
+  const checkResult = spawnSync(process.execPath, [cliPath, 'check', empty], { encoding: 'utf8' });
   assert.notEqual(checkResult.status, 0);
   assert.match(checkResult.stderr, /retry plan\.source must be a non-empty string/);
   const fixturePlan = planFromLog('fixture.json', { connector: 'github', action: 'issues.get' });
   const valid = path.join(directory, 'valid.json');
   fs.writeFileSync(valid, JSON.stringify(fixturePlan));
-  const policyResult = spawnSync(process.execPath, ['dist/cli.js', 'check', valid, '--require-approval', 'invalid'], { encoding: 'utf8' });
+  const policyResult = spawnSync(process.execPath, [cliPath, 'check', valid, '--require-approval', 'invalid'], { encoding: 'utf8' });
   assert.notEqual(policyResult.status, 0);
   assert.match(policyResult.stderr, /--require-approval must be one of/);
 });
@@ -215,7 +218,7 @@ test('compiled CLI applies mutation boundaries to action logs', () => {
     const input = path.join(directory, `${action.replaceAll(/[^a-z0-9]/gi, '-')}.json`);
     const output = path.join(directory, `${action.replaceAll(/[^a-z0-9]/gi, '-')}-plan.json`);
     fs.writeFileSync(input, JSON.stringify({ connector: 'test', action }));
-    const result = spawnSync(process.execPath, ['dist/cli.js', 'plan', input, '--json', output], { encoding: 'utf8' });
+    const result = spawnSync(process.execPath, [cliPath, 'plan', input, '--json', output], { encoding: 'utf8' });
     assert.equal(result.status, 0, `${action}: ${result.stderr}`);
     assert.equal(JSON.parse(fs.readFileSync(output, 'utf8')).classification, classification, action);
   }
@@ -236,7 +239,7 @@ test('compiled CLI emits blocked plans for completed and in-flight actions and r
     const input = path.join(directory, `${item.name}.json`);
     const output = path.join(directory, `${item.name}-plan.json`);
     fs.writeFileSync(input, JSON.stringify(item.log));
-    const result = spawnSync(process.execPath, ['dist/cli.js', 'plan', input, '--json', output], { encoding: 'utf8' });
+    const result = spawnSync(process.execPath, [cliPath, 'plan', input, '--json', output], { encoding: 'utf8' });
     assert.equal(result.status, 0, result.stderr);
     const generated = JSON.parse(fs.readFileSync(output, 'utf8'));
     assert.equal(generated.classification, item.classification);
@@ -251,14 +254,14 @@ test('compiled CLI reports safe-plan outcomes for every approval policy', () => 
   const input = path.join(directory, 'safe-log.json');
   const output = path.join(directory, 'safe-plan.json');
   fs.writeFileSync(input, JSON.stringify({ connector: 'github', action: 'issues.get', status: 'failed' }));
-  const plan = spawnSync(process.execPath, ['dist/cli.js', 'plan', input, '--json', output], { encoding: 'utf8' });
+  const plan = spawnSync(process.execPath, [cliPath, 'plan', input, '--json', output], { encoding: 'utf8' });
   assert.equal(plan.status, 0, plan.stderr);
   for (const policy of ['none', 'risky']) {
-    const check = spawnSync(process.execPath, ['dist/cli.js', 'check', output, '--require-approval', policy], { encoding: 'utf8' });
+    const check = spawnSync(process.execPath, [cliPath, 'check', output, '--require-approval', policy], { encoding: 'utf8' });
     assert.equal(check.status, 0, `${policy}: ${check.stderr}`);
     assert.match(check.stdout, /retry plan check passed/);
   }
-  const all = spawnSync(process.execPath, ['dist/cli.js', 'check', output, '--require-approval', 'all'], { encoding: 'utf8' });
+  const all = spawnSync(process.execPath, [cliPath, 'check', output, '--require-approval', 'all'], { encoding: 'utf8' });
   assert.equal(all.status, 1);
   assert.match(all.stderr, /policy "all" rejects safe plans/);
   assert.match(all.stderr, /use "risky" or "none"/);
@@ -267,11 +270,11 @@ test('compiled CLI accepts documented plan and check forms', () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'connector-retry-valid-cli-'));
   const markdown = path.join(directory, 'plan.md');
   const json = path.join(directory, 'plan.json');
-  const plan = spawnSync(process.execPath, ['dist/cli.js', 'plan', 'fixtures/slack-failure.json', '--out', markdown, '--json', json], { encoding: 'utf8' });
+  const plan = spawnSync(process.execPath, [cliPath, 'plan', fixturePath, '--out', markdown, '--json', json], { encoding: 'utf8' });
   assert.equal(plan.status, 0, plan.stderr);
   assert.equal(fs.existsSync(markdown), true);
   assert.equal(fs.existsSync(json), true);
-  const check = spawnSync(process.execPath, ['dist/cli.js', 'check', json, '--require-approval', 'risky'], { encoding: 'utf8' });
+  const check = spawnSync(process.execPath, [cliPath, 'check', json, '--require-approval', 'risky'], { encoding: 'utf8' });
   assert.equal(check.status, 0, check.stderr);
   assert.match(check.stdout, /retry plan check passed/);
 });
@@ -289,7 +292,7 @@ test('compiled CLI rejects malformed command lines with usage status and no arti
     { args: ['check', 'plan.json', '--require-approval', '--out'], error: /option "--require-approval" requires a value/ },
   ];
   for (const item of cases) {
-    const result = spawnSync(process.execPath, ['dist/cli.js', ...item.args], { encoding: 'utf8' });
+    const result = spawnSync(process.execPath, [cliPath, ...item.args], { encoding: 'utf8' });
     assert.equal(result.status, 2, `${item.args.join(' ')}: ${result.stderr}`);
     assert.match(result.stderr, item.error);
     assert.match(result.stderr, /usage: connector-retry-dryrun/);
