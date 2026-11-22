@@ -2,7 +2,7 @@ import test from 'node:test'; import assert from 'node:assert/strict'; import fs
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const cliPath = path.join(projectRoot, 'dist/src/cli.js');
 const fixturePath = path.join(projectRoot, 'fixtures/slack-failure.json');
-import { planFromLog, renderMarkdown, checkPlan, validateActionLog, validateRetryPlan } from '../index.js';
+import { classify, planFromLog, renderMarkdown, checkPlan, validateActionLog, validateRetryPlan } from '../index.js';
 const actionCases = [
   ['post_message', 'needs_idempotency_key'],
   ['contact.update', 'needs_idempotency_key'],
@@ -56,6 +56,20 @@ const actionCases = [
   ['users.disabledList', 'safe'],
   ['calendar.cancellationPolicy', 'safe'],
 ] as const;
+test('every classify result validates as a retry plan across status, mutation, and key branches', () => {
+  const statuses = [undefined, 'failed', 'success', 'completed', 'pending', 'running'];
+  const actions = ['messages.get', 'post_message', 'files.remove'];
+  const keys = [undefined, null, 'key-1'];
+  for (const status of statuses) {
+    for (const action of actions) {
+      for (const idempotencyKey of keys) {
+        const log = { connector: 'test', action, ...(status === undefined ? {} : { status }), ...(idempotencyKey === undefined ? {} : { idempotencyKey }) };
+        const result = classify(log);
+        assert.doesNotThrow(() => validateRetryPlan({ source: 'fixture.json', ...result }), JSON.stringify(log));
+      }
+    }
+  }
+});
 test('classifies boundary-delimited mutation verbs without read-name false positives', () => {
   for (const [action, classification] of actionCases) {
     const plan = planFromLog('fixture.json', { connector: 'test', action });
