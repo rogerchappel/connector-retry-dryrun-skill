@@ -22,6 +22,9 @@ function text(value: unknown, label: string): asserts value is string {
 }
 function optionalText(value: unknown, label: string): void {
   if (value !== undefined && value !== null) text(value, label);
+  if ((label === 'action log.idempotencyKey' || label === 'retry plan.idempotencyKey') && typeof value === 'string' && value.trim() === '') {
+    throw new Error(`${label} must be a non-empty string`);
+  }
 }
 function stringList(value: unknown, label: string, allowEmpty: boolean): asserts value is string[] {
   if (!Array.isArray(value)) throw new Error(`${label} must be an array`);

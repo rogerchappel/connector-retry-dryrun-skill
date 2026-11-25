@@ -77,6 +77,13 @@ test('classifies boundary-delimited mutation verbs without read-name false posit
     assert.equal(plan.approval === 'none', classification === 'safe', action);
   }
 });
+test('rejects empty and whitespace-only idempotency keys on action logs and retry plans', () => {
+  for (const idempotencyKey of ['', '   ', '\t\n']) {
+    assert.throws(() => validateActionLog({ connector: 'test', action: 'post_message', idempotencyKey }), /idempotencyKey must be a non-empty string/);
+    assert.throws(() => validateRetryPlan({ source: 'fixture.json', connector: 'test', action: 'post_message', classification: 'needs_human_approval', approval: 'recommended', rationale: ['x'], evidence: [], nextSteps: ['x'], idempotencyKey }), /idempotencyKey must be a non-empty string/);
+    assert.throws(() => classify({ connector: 'test', action: 'post_message', idempotencyKey }), /idempotencyKey must be a non-empty string/);
+  }
+});
 test('classifies mutation without idempotency as approval gated', () => { const log = JSON.parse(fs.readFileSync(fixturePath,'utf8')); const plan = planFromLog('fixtures/slack-failure.json', log); assert.equal(plan.classification, 'needs_idempotency_key'); assert.equal(checkPlan(plan).length, 0); });
 test('classifies keyed update with approval guidance', () => { const log = JSON.parse(fs.readFileSync(path.join(projectRoot, 'fixtures/crm-update.json'),'utf8')); const plan = planFromLog('fixtures/crm-update.json', log); assert.equal(plan.classification, 'needs_human_approval'); assert.equal(plan.approval, 'recommended'); });
 test('classifies keyed reversible mutations with approval guidance', () => {
