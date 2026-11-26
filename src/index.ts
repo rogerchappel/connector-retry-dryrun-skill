@@ -5,7 +5,7 @@ export interface RetryPlan { source: string; connector: string; action: string; 
 const mutationVerbs = new Set([
   'post', 'send', 'comment', 'create', 'update', 'patch', 'put', 'upsert',
   'add', 'edit', 'set', 'move', 'delete', 'remove', 'archive', 'write',
-  'publish', 'upload', 'reply', 'close', 'disable', 'cancel'
+  'publish', 'upload', 'reply', 'close', 'disable', 'cancel', 'grant', 'revoke'
 ]);
 const irreversibleVerbs = new Set(['delete', 'remove', 'archive', 'close', 'disable', 'cancel']);
 const retryClasses: RetryClass[] = ['safe', 'needs_idempotency_key', 'needs_human_approval', 'do_not_retry'];
