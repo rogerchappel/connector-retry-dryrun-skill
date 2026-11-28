@@ -125,13 +125,17 @@ test('continues normal retry classification for failed records', () => {
   assert.equal(planFromLog('fixture.json', { connector: 'test', action: 'post_message', status: 'failed' }).classification, 'needs_idempotency_key');
   assert.equal(planFromLog('fixture.json', { connector: 'test', action: 'post_message', status: 'failed', idempotencyKey: 'retry-1' }).classification, 'needs_human_approval');
 });
-test('rejects unknown provider statuses instead of recommending retries', () => {
-  for (const status of ['unknown', 'processing-ish', 'cancelled_by_provider', ' SUCCESSFUL? ']) {
+test('reports the exact diagnostic for unknown terminal-like provider statuses', () => {
+  const diagnostic = 'action log.status must be one of: failed, failure, error, errored, timeout, timed_out, success, succeeded, successful, complete, completed, pending, queued, running, in_progress';
+  for (const status of ['done', 'timed_out-ish', ' SUCCESSFUL? ']) {
     for (const action of ['messages.get', 'post_message']) {
       const log = { connector: 'crm', action, status };
-      assert.throws(() => validateActionLog(log), /action log\.status must be one of/);
-      assert.throws(() => planFromLog('fixture.json', log), /action log\.status must be one of/);
+      assert.throws(() => validateActionLog(log), { message: diagnostic });
+      assert.throws(() => planFromLog('fixture.json', log), { message: diagnostic });
     }
+  }
+  for (const status of [' ', '\t\n']) {
+    assert.throws(() => validateActionLog({ connector: 'crm', action: 'messages.get', status }), { message: 'action log.status must be a non-empty string' });
   }
 });
 test('blocks retries while actions have an in-flight status', () => {
